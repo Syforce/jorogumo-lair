@@ -1,5 +1,5 @@
 {
-	"name": "@jorogumo",
+	"name": "jorogumo",
 	"version": "0.0.0",
 	"description": "Jorogumo Lair",
 	"main": "dist/index.ts",
