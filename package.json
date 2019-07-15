@@ -1,0 +1,18 @@
+{
+	"name": "@jorogumo",
+	"version": "0.0.0",
+	"description": "Jorogumo Lair",
+	"main": "dist/index.ts",
+	"types": "dist/index.d.ts",
+	"private": false,
+	"repository": {},
+	"author": "Syforce Lightningstorm",
+	"license": "ISC",
+	"scripts": {
+		"build": "tsc"
+	},
+	"dependencies": {
+		"express": "^4.17.1"
+	},
+	"devDependencies": {}
+}
