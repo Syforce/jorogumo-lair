@@ -8,6 +8,7 @@
 	"repository": {},
 	"author": "Syforce Lightningstorm",
 	"license": "ISC",
+	"main": "src/index.ts",
 	"scripts": {
 		"build": "tsc"
 	},

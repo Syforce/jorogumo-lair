@@ -54,7 +54,6 @@ export abstract class AbstractRouter<T> {
 	private reply(response: Response, options: IRouteOptions) {
 		return (data) => {
 			const responseData = options.parser ? options.parser.parseResponse(data) : data;
-
 			response.status(200).json(responseData);
 			// this.performanceService.stop();
 		}
