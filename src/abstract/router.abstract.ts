@@ -1,61 +1,79 @@
 import { Request, Response, Router } from 'express';
-
-import { AbstractManager } from './manager.abstract';
 // import { PerformanceService } from '../../shared/logging/performance.service';
-import { AbstractParser } from './parser.abstract';
-import { IRouteOptions } from '../config/model/route-options.model';
+import { IMiddleware, IRouteOptions, MethodType } from 'wulgaru';
+
+import { RouteMap } from '../config/model/route-map.model';
+import { RequestError } from 'wulgaru/src/web/request-error';
+
+// TODO: Fix naming
+import { Err } from './parser.abstract';
 
 export abstract class AbstractRouter<T> {
-	protected readonly router: Router;
-	// protected readonly performanceService: PerformanceService = new PerformanceService();
+    protected readonly router: Router;
+    private readonly routeMap: RouteMap;
+    private middleware: Array<IMiddleware> = new Array<IMiddleware>();
 
-	protected manager: AbstractManager<T>;
+    // protected readonly performanceService: PerformanceService = new PerformanceService();
 
-	constructor(router: Router) {
-		this.router = router;
+    constructor(router: Router, routeMap: RouteMap) {
+        this.router = router;
+        this.routeMap = routeMap;
+    }
 
-		this.initManagers();
-		this.initRoutes();
-	}
+    public abstract initRoutes(): void;
 
-	protected abstract initManagers();
+    public setMiddleware(middleware: Array<IMiddleware>): void {
+        this.middleware = middleware;
+    }
 
-	protected abstract initRoutes();
+    protected get(options: IRouteOptions): void {
+        this.router.get(options.url, this.decorateCallback(MethodType.GET, options));
+    }
 
-	protected get(options: IRouteOptions) {
-		this.router.get(options.url, this.decorateCallback(options));
-	}
+    protected post(options: IRouteOptions): void {
+        this.router.post(options.url, this.decorateCallback(MethodType.POST, options));
+    }
 
-	protected post(options: IRouteOptions) {
-		this.router.post(options.url, this.decorateCallback(options));
-	}
+    protected put(options: IRouteOptions): void {
+        this.router.put(options.url, this.decorateCallback(MethodType.PUT, options));
+    }
 
-	protected put(options: IRouteOptions) {
-		this.router.put(options.url, this.decorateCallback(options));
-	}
+    protected delete(options: IRouteOptions): void {
+        this.router.delete(options.url, this.decorateCallback(MethodType.DELETE, options));
+    }
 
-	protected delete(options: IRouteOptions) {
-		this.router.delete(options.url, this.decorateCallback(options));
-	}
+    private decorateCallback(methodType: MethodType, options: IRouteOptions) {
+        this.routeMap.addRouteRule(methodType, options.url);
 
-	private decorateCallback(options: IRouteOptions) {
-		return (request: Request, response: Response) => {
-			// this.performanceService.start();
-			const args: Array<any> = new Array<any>();
-			const requestData = options.parser.parseRequest(request);
+        for (let i = 0; i < this.middleware.length; i++) {
+            this.middleware[i].call(methodType, options);
+        }
 
-			requestData && args.push(requestData);
-			args.push(this.reply(response, options));
+        return (request: Request, response: Response) => {
+            const requestData = options.parser ? options.parser.parseRequest(request) : request;
 
-			options.callback.apply(this, args);
-		};
-	}
+            if (requestData instanceof  Err) {
+                response.status(500).json(requestData);
+            } else {
+                const promise: Promise<any> = options.run.call(this, requestData);
+                promise.then(this.replySuccess(response, options), this.replyFail(response, options));
+                // options.run.call(this, this.replySuccess(response, options), this.replyFail(response, options), requestData);
+            }
+        };
+    }
 
-	private reply(response: Response, options: IRouteOptions) {
-		return (data) => {
-			const responseData = options.parser ? options.parser.parseResponse(data) : data;
-			response.status(200).json(responseData);
-			// this.performanceService.stop();
-		}
-	}
+    private replySuccess(response: Response, options: IRouteOptions) {
+        return (data: any) => {
+            const responseData = options.parser ? options.parser.parseResponse(data) : data;
+            response.status(200).json(responseData);
+            // this.performanceService.stop();
+        }
+    }
+
+    private replyFail(response: Response, options: IRouteOptions) {
+        return (data: any) => {
+            const responseData = data;
+            response.status(500).json(responseData.message);
+        }
+    }
 }
